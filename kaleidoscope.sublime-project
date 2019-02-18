@@ -3,6 +3,9 @@
 	[
 		{
 			"path": "."
+		},
+		{
+			"path": "/usr/local/Cellar/llvm"
 		}
 	]
 }
