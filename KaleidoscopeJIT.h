@@ -39,8 +39,8 @@ namespace orc {
 
 class KaleidoscopeJIT {
 public:
-  using ObjLayerT = LegacyRTDyldObjectLinkingLayer;
-  using CompileLayerT = LegacyIRCompileLayer<ObjLayerT, SimpleCompiler>;
+  using ObjLayerT = RTDyldObjectLinkingLayer;
+  using CompileLayerT = IRCompileLayer<ObjLayerT, SimpleCompiler>;
 
   KaleidoscopeJIT()
       : Resolver(createLegacyLookupResolver(
