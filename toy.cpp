@@ -1,5 +1,15 @@
 // Kaleidoscope language from LLDB
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -9,12 +19,21 @@
 #include <string>
 #include <vector>
 
+using namespace llvm;
+
 /******** PREDECLARATIONS *******/
 
 class ExprAST;
 class PrototypeAST;
 
 static std::unique_ptr<ExprAST> ParseExpression();
+
+/******** CODE GENERATION GLOBALS *********/
+
+static LLVMContext TheContext;
+static IRBuilder<> Builder(TheContext);
+static std::unique_ptr<Module> TheModule;
+static std::map<std::string, Value *> NamedValues;
 
 /******** HELPER ROUTINES *******/
 
@@ -24,6 +43,11 @@ std::unique_ptr<ExprAST> LogError(const char *Str) {
   return nullptr;
 }
 std::unique_ptr<PrototypeAST> LogErrorP(const char *Str) {
+  LogError(Str);
+  return nullptr;
+}
+
+Value *LogErrorV(const char *Str) {
   LogError(Str);
   return nullptr;
 }
@@ -108,6 +132,7 @@ static int gettok() {
 class ExprAST {
 public:
   virtual ~ExprAST() {}
+  virtual Value *codegen() = 0;
 };
 
 /// NumberExprAST - Expression class for numeric literals like "1.0".
@@ -116,6 +141,7 @@ class NumberExprAST : public ExprAST {
 
 public:
   NumberExprAST(double Val) : Val(Val) {}
+  virtual Value *codegen();
 };
 
 /// VariableExprAST - Expression class for referencing a variable, like "a".
@@ -124,6 +150,7 @@ class VariableExprAST : public ExprAST {
 
 public:
   VariableExprAST(const std::string &Name) : Name(Name) {}
+  virtual Value *codegen();
 };
 
 /// BinaryExprAST - Expression class for a binary operator.
@@ -135,6 +162,7 @@ public:
   BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
                 std::unique_ptr<ExprAST> RHS)
     : Op(op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+  virtual Value *codegen();
 };
 
 /// CallExprAST - Expression class for function calls.
@@ -146,6 +174,7 @@ public:
   CallExprAST(const std::string &Callee,
               std::vector<std::unique_ptr<ExprAST>> Args)
     : Callee(Callee), Args(std::move(Args)) {}
+  virtual Value *codegen();
 };
 
 /// PrototypeAST - This class represents the "prototype" for a function,
@@ -158,6 +187,7 @@ class PrototypeAST {
 public:
   PrototypeAST(const std::string &name, std::vector<std::string> Args)
     : Name(name), Args(std::move(Args)) {}
+  virtual Value *codegen();
 
   const std::string &getName() const { return Name; }
 };
@@ -171,6 +201,7 @@ public:
   FunctionAST(std::unique_ptr<PrototypeAST> Proto,
               std::unique_ptr<ExprAST> Body)
     : Proto(std::move(Proto)), Body(std::move(Body)) {}
+  virtual Value *codegen();
 };
 
 
