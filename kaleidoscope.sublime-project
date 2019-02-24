@@ -5,7 +5,7 @@
 			"path": "."
 		},
 		{
-			"path": "/usr/local/Cellar/llvm"
+			"path": "/usr/local/Cellar/llvm@6"
 		}
 	]
 }
